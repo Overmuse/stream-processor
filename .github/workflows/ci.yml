@@ -7,12 +7,14 @@ on:
       - 'Cargo.lock'
       - 'Dockerfile'
       - 'src/**'  
+      - 'tests/**'  
   pull_request:
     paths:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'Dockerfile'
       - 'src/**'  
+      - 'tests/**'  
 
 name: Continuous integration
 
