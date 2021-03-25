@@ -2,6 +2,7 @@ use crate::{error::Result, intake::Intake, kafka::producer, settings::KafkaSetti
 use futures::StreamExt;
 use rdkafka::producer::FutureRecord;
 use serde::{de::DeserializeOwned, Serialize};
+use std::marker::PhantomData;
 use std::time::Duration;
 use tracing::{debug, error, info, trace};
 
@@ -16,20 +17,20 @@ pub trait StreamProcessor {
 
 pub struct StreamRunner<'a, I, T>
 where
-    T: StreamProcessor,
     I: Intake<'a, T::Input>,
+    T: StreamProcessor,
 {
     intake: &'a mut I,
-    processor: T,
     settings: KafkaSettings,
+    phantom: PhantomData<T>,
 }
 
 impl<'a, I: Intake<'a, T::Input>, T: StreamProcessor> StreamRunner<'a, I, T> {
-    pub fn new(intake: &'a mut I, processor: T, settings: KafkaSettings) -> Self {
+    pub fn new(intake: &'a mut I, settings: KafkaSettings) -> Self {
         Self {
             intake,
-            processor,
             settings,
+            phantom: PhantomData,
         }
     }
 

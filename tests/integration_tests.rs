@@ -98,7 +98,6 @@ async fn kafka() {
 
     // Setup stream processor
     tokio::spawn(async {
-        let processor = StreamDoubler;
         let settings = KafkaSettings::new(
             "localhost:9094".into(),
             "test".into(),
@@ -106,7 +105,7 @@ async fn kafka() {
             vec!["test-input".into()],
         );
         let mut consumer = stream_processor::kafka::consumer(&settings).unwrap();
-        let runner = StreamRunner::new(&mut consumer, processor, settings);
+        let runner = StreamRunner::new(&mut consumer, settings);
         let initialization_context = vec!["test-input".to_string()];
         runner
             .run(StreamDoubler, initialization_context)
@@ -170,7 +169,6 @@ async fn websocket() {
 
     // Setup stream processor
     tokio::spawn(async {
-        let processor = StreamDoubler;
         let settings = KafkaSettings::new(
             "localhost:9094".into(),
             "test".into(),
@@ -180,7 +178,7 @@ async fn websocket() {
         con_rx.await.expect("Server not ready");
         // Server is ready
         let (mut websocket, _) = connect_async("wss://127.0.0.1:12345").await.unwrap();
-        let runner = StreamRunner::new(&mut websocket, processor, settings);
+        let runner = StreamRunner::new(&mut websocket, settings);
         let initialization_context = vec!["test-input".to_string()];
         runner
             .run(StreamDoubler, initialization_context)
