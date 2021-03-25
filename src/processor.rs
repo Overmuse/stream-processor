@@ -31,6 +31,7 @@ impl<T: StreamProcessor> StreamRunner<T> {
         }
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn run(&self) -> Result<()> {
         info!("Starting stream processor");
         let consumer = consumer(&self.settings)?;

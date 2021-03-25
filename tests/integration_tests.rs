@@ -4,6 +4,7 @@ use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::Message;
 use rdkafka::{client::DefaultClientContext, ClientConfig};
 use stream_processor::*;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 struct StreamDoubler;
 
@@ -48,6 +49,13 @@ fn test_consumer() -> StreamConsumer {
 
 #[tokio::test]
 async fn main() {
+    // Setup logger
+    tracing::subscriber::set_global_default(
+        FmtSubscriber::builder()
+            .with_env_filter(EnvFilter::from_default_env())
+            .finish(),
+    )
+    .unwrap();
     // Create topics
     let admin_options = AdminOptions::new();
     let admin = test_admin();
@@ -74,10 +82,13 @@ async fn main() {
         let runner = StreamRunner::new(processor, settings);
         runner.run().await.unwrap();
     });
+
+    // Setup test producer and consumer
     let test_producer = test_producer();
     let test_consumer = test_consumer();
     test_consumer.subscribe(&["test-output"]).unwrap();
 
+    // Actual test
     test_producer
         .send_result(FutureRecord::to("test-input").key("test").payload("2"))
         .unwrap();
