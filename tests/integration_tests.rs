@@ -1,8 +1,10 @@
-use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
-use rdkafka::consumer::{Consumer, StreamConsumer};
-use rdkafka::producer::{FutureProducer, FutureRecord};
-use rdkafka::Message;
-use rdkafka::{client::DefaultClientContext, ClientConfig};
+use rdkafka::{
+    admin::{AdminClient, AdminOptions, NewTopic, TopicReplication},
+    client::DefaultClientContext,
+    consumer::{Consumer, StreamConsumer},
+    producer::{FutureProducer, FutureRecord},
+    ClientConfig, Message,
+};
 use stream_processor::*;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
