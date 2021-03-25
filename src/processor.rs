@@ -22,7 +22,7 @@ where
 {
     intake: &'a mut I,
     settings: KafkaSettings,
-    phantom: PhantomData<T>,
+    phantom: PhantomData<*const T>,
 }
 
 impl<'a, I: Intake<'a, T::Input>, T: StreamProcessor> StreamRunner<'a, I, T> {
