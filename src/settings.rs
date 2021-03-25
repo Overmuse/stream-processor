@@ -52,14 +52,4 @@ impl KafkaSettings {
         }
         config
     }
-
-    #[cfg(test)]
-    pub fn test_settings() -> Self {
-        Self {
-            bootstrap_servers: "localhost:9094".into(),
-            group_id: "test".into(),
-            security_protocol: SecurityProtocol::Plaintext,
-            input_topics: vec!["test-input".into()],
-        }
-    }
 }

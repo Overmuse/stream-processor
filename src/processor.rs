@@ -70,36 +70,3 @@ impl<T: StreamProcessor> StreamRunner<T> {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tracing_subscriber::{EnvFilter, FmtSubscriber};
-
-    struct EchoProcessor;
-    impl StreamProcessor for EchoProcessor {
-        type Input = f32;
-        type Output = f32;
-
-        fn handle_message(&self, input: f32) -> Result<f32> {
-            Ok(input)
-        }
-        fn assign_topic(&self, _output: &f32) -> &str {
-            "topic"
-        }
-        fn assign_key(&self, _output: &f32) -> &str {
-            "key"
-        }
-    }
-
-    #[tokio::test]
-    async fn it_works() {
-        let subscriber = FmtSubscriber::builder()
-            .with_env_filter(EnvFilter::from_default_env())
-            .finish();
-        tracing::subscriber::set_global_default(subscriber).unwrap();
-        let settings = KafkaSettings::test_settings();
-        let runner = StreamRunner::new(EchoProcessor, settings);
-        runner.run().await.unwrap();
-    }
-}
