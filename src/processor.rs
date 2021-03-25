@@ -19,13 +19,13 @@ where
     T: StreamProcessor,
     I: Intake<'a, T::Input>,
 {
-    intake: &'a I,
+    intake: &'a mut I,
     processor: T,
     settings: KafkaSettings,
 }
 
 impl<'a, I: Intake<'a, T::Input>, T: StreamProcessor> StreamRunner<'a, I, T> {
-    pub fn new(intake: &'a I, processor: T, settings: KafkaSettings) -> Self {
+    pub fn new(intake: &'a mut I, processor: T, settings: KafkaSettings) -> Self {
         Self {
             intake,
             processor,
@@ -33,8 +33,8 @@ impl<'a, I: Intake<'a, T::Input>, T: StreamProcessor> StreamRunner<'a, I, T> {
         }
     }
 
-    #[tracing::instrument(skip(self, ctx))]
-    pub async fn run(&self, ctx: I::InitializationContext) -> Result<()> {
+    #[tracing::instrument(skip(self, processor, ctx))]
+    pub async fn run(self, processor: T, ctx: I::InitializationContext) -> Result<()> {
         info!("Starting stream processor");
         let producer = producer(&self.settings)?;
 
@@ -42,7 +42,7 @@ impl<'a, I: Intake<'a, T::Input>, T: StreamProcessor> StreamRunner<'a, I, T> {
 
         self.intake
             .to_stream()
-            .map(|msg| self.processor.handle_message(msg.unwrap()))
+            .map(|msg| processor.handle_message(msg.unwrap()))
             .for_each_concurrent(None, |msg| async {
                 if msg.is_err() {
                     error!("{:?}", msg);
@@ -51,8 +51,8 @@ impl<'a, I: Intake<'a, T::Input>, T: StreamProcessor> StreamRunner<'a, I, T> {
                 let msg = msg.expect("Guaranteed to be Ok");
                 debug!("Message received: {:?}", msg);
                 let serialized = serde_json::to_string(&msg).expect("Failed to serialize message");
-                let topic = self.processor.assign_topic(&msg);
-                let key = self.processor.assign_key(&msg);
+                let topic = processor.assign_topic(&msg);
+                let key = processor.assign_key(&msg);
                 let record = FutureRecord::to(topic).key(key).payload(&serialized);
                 let res = producer.send(record, Duration::from_secs(0)).await;
                 match res {
