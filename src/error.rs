@@ -8,9 +8,6 @@ pub enum Error {
     #[error("IO error: {0:?}")]
     Io(#[from] std::io::Error),
 
-    #[error("Error in config: {0:?}")]
-    Config(#[from] config::ConfigError),
-
     #[error("Error from Kafka: {0:?}")]
     Kafka(#[from] rdkafka::error::KafkaError),
 
