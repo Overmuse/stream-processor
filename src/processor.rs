@@ -36,34 +36,36 @@ impl<T: StreamProcessor> StreamRunner<T> {
         let consumer = consumer(&self.settings)?;
         let producer = producer(&self.settings)?;
 
-        let mut msg_stream = consumer.stream().map(|x| -> Result<T::Output> {
+        let msg_stream = consumer.stream().map(|x| -> Result<T::Output> {
             let owned = x?.detach();
             let payload = owned.payload().ok_or(Error::EmptyPayload)?;
             let deserialized: T::Input = serde_json::from_slice(payload)?;
             self.processor.handle_message(deserialized)
         });
-        while let Some(msg) = msg_stream.next().await {
-            if msg.is_err() {
-                error!("{:?}", msg);
-                continue;
-            }
-            let msg = msg.expect("Guaranteed to be Ok");
-            debug!("Message received: {:?}", msg);
-            let serialized = serde_json::to_string(&msg)?;
-            let topic = self.processor.assign_topic(&msg);
-            let key = self.processor.assign_key(&msg);
-            let record = FutureRecord::to(topic).key(key).payload(&serialized);
-            let res = producer.send(record, Duration::from_secs(0)).await;
-            match res {
-                Ok((partition, offset)) => trace!(
-                    "Message successfully delivered to topic: {}, partition {}, offset {}",
-                    topic,
-                    partition,
-                    offset
-                ),
-                Err((err, msg)) => error!("Message: {:?}\nError: {:?}", msg, err),
-            }
-        }
+        msg_stream
+            .for_each_concurrent(None, |msg| async {
+                if msg.is_err() {
+                    error!("{:?}", msg);
+                    return;
+                }
+                let msg = msg.expect("Guaranteed to be Ok");
+                debug!("Message received: {:?}", msg);
+                let serialized = serde_json::to_string(&msg).expect("Failed to serialize message");
+                let topic = self.processor.assign_topic(&msg);
+                let key = self.processor.assign_key(&msg);
+                let record = FutureRecord::to(topic).key(key).payload(&serialized);
+                let res = producer.send(record, Duration::from_secs(0)).await;
+                match res {
+                    Ok((partition, offset)) => trace!(
+                        "Message successfully delivered to topic: {}, partition {}, offset {}",
+                        topic,
+                        partition,
+                        offset
+                    ),
+                    Err((err, msg)) => error!("Message: {:?}\nError: {:?}", msg, err),
+                }
+            })
+            .await;
         info!("Ending stream processor");
         Ok(())
     }
