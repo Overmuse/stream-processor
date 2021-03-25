@@ -10,8 +10,8 @@ use std::time::Duration;
 use tracing::{debug, error, info, trace};
 
 pub trait StreamProcessor {
-    type Input: DeserializeOwned + Unpin;
-    type Output: Serialize + Unpin + std::fmt::Debug;
+    type Input: DeserializeOwned;
+    type Output: Serialize + std::fmt::Debug;
 
     fn handle_message(&self, input: Self::Input) -> Result<Self::Output>;
     fn assign_topic(&self, output: &Self::Output) -> &str;

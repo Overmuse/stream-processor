@@ -30,7 +30,7 @@ impl KafkaSettings {
         }
     }
 
-    pub fn config<'a>(
+    pub(crate) fn config<'a>(
         &self,
         config: &'a mut rdkafka::ClientConfig,
     ) -> &'a mut rdkafka::ClientConfig {
