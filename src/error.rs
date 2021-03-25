@@ -13,6 +13,8 @@ pub enum Error {
 
     #[error("Error from Serde: {0:?}")]
     Serde(#[from] serde_json::Error),
+    //#[error("Error from Tungstenite: {0:?}")]
+    //Tungstenite(#[from] tokio_tungstenite::tungstenite::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

@@ -81,8 +81,10 @@ async fn main() {
             SecurityProtocol::Plaintext,
             vec!["test-input".into()],
         );
-        let runner = StreamRunner::new(processor, settings);
-        runner.run().await.unwrap();
+        let consumer = stream_processor::kafka::consumer(&settings).unwrap();
+        let runner = StreamRunner::new(&consumer, processor, settings);
+        let initialization_context = vec!["test-input".to_string()];
+        runner.run(initialization_context).await.unwrap();
     });
 
     // Setup test producer and consumer

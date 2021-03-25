@@ -1,10 +1,6 @@
-use crate::{
-    error::{Error, Result},
-    kafka::{consumer, producer},
-    settings::KafkaSettings,
-};
-use futures::prelude::*;
-use rdkafka::{message::Message, producer::FutureRecord};
+use crate::{error::Result, intake::Intake, kafka::producer, settings::KafkaSettings};
+use futures::StreamExt;
+use rdkafka::producer::FutureRecord;
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
 use tracing::{debug, error, info, trace};
@@ -18,32 +14,35 @@ pub trait StreamProcessor {
     fn assign_key(&self, output: &Self::Output) -> &str;
 }
 
-pub struct StreamRunner<T: StreamProcessor> {
+pub struct StreamRunner<'a, I, T>
+where
+    T: StreamProcessor,
+    I: Intake<'a, T::Input>,
+{
+    intake: &'a I,
     processor: T,
     settings: KafkaSettings,
 }
 
-impl<T: StreamProcessor> StreamRunner<T> {
-    pub fn new(processor: T, settings: KafkaSettings) -> Self {
+impl<'a, I: Intake<'a, T::Input>, T: StreamProcessor> StreamRunner<'a, I, T> {
+    pub fn new(intake: &'a I, processor: T, settings: KafkaSettings) -> Self {
         Self {
+            intake,
             processor,
             settings,
         }
     }
 
-    #[tracing::instrument(skip(self))]
-    pub async fn run(&self) -> Result<()> {
+    #[tracing::instrument(skip(self, ctx))]
+    pub async fn run(&self, ctx: I::InitializationContext) -> Result<()> {
         info!("Starting stream processor");
-        let consumer = consumer(&self.settings)?;
         let producer = producer(&self.settings)?;
 
-        let msg_stream = consumer.stream().map(|x| -> Result<T::Output> {
-            let owned = x?.detach();
-            let payload = owned.payload().ok_or(Error::EmptyPayload)?;
-            let deserialized: T::Input = serde_json::from_slice(payload)?;
-            self.processor.handle_message(deserialized)
-        });
-        msg_stream
+        self.intake.initialize(ctx)?;
+
+        self.intake
+            .to_stream()
+            .map(|msg| self.processor.handle_message(msg.unwrap()))
             .for_each_concurrent(None, |msg| async {
                 if msg.is_err() {
                     error!("{:?}", msg);

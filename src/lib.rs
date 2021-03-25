@@ -1,5 +1,7 @@
+#![feature(type_alias_impl_trait)]
 pub mod error;
-mod kafka;
+pub mod intake;
+pub mod kafka;
 pub mod processor;
 pub mod settings;
 
