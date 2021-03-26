@@ -9,17 +9,27 @@ use futures::{
 };
 use rdkafka::{message::Message, producer::FutureRecord};
 use serde::{de::DeserializeOwned, Serialize};
-use std::borrow::Cow;
-use std::time::Duration;
+use std::{borrow::Cow, time::Duration};
 use tracing::{debug, error, info, trace};
 
 #[async_trait::async_trait]
+/// The common trait for all stream processors.
 pub trait StreamProcessor {
+    /// The input type to deserialize into from the Kafka input topics
     type Input: DeserializeOwned;
+    /// The output type from the stream processor, which will be serialized and sent to Kafka.
     type Output: Serialize + std::fmt::Debug;
 
-    async fn handle_message(&self, input: Self::Input) -> Result<Option<Self::Output>>;
+    /// Convert the input into a `impl Future<Result<Option<Vec<Self::Output>>>>`.  
+    /// [`futures::Future`] because we might want to `await` in the implementation.  
+    /// [`Result`] because our function might fail.  
+    /// [`Option`] because we might not want to send any output. If this is `None`, we skip sending
+    /// to Kafka.  
+    /// [`Vec`] because we might want to send _many_ outputs for one input  
+    async fn handle_message(&self, input: Self::Input) -> Result<Option<Vec<Self::Output>>>;
+    /// Decide which topic to send the output to.
     fn assign_topic(&self, output: &Self::Output) -> Cow<str>;
+    /// Decide which key to assign to the output.
     fn assign_key(&self, output: &Self::Output) -> Cow<str>;
 }
 
@@ -63,28 +73,31 @@ impl<T: StreamProcessor> StreamRunner<T> {
                 }
             });
         msg_stream
-            .for_each_concurrent(None, |msg| async {
-                if msg.is_err() {
-                    error!("{:?}", msg);
+            .for_each_concurrent(None, |msgs| async {
+                if msgs.is_err() {
+                    error!("{:?}", msgs);
                     return;
                 }
-                debug!("Message received: {:?}", msg);
-                let msg = msg.expect("Guaranteed to be Ok");
-                let serialized = serde_json::to_string(&msg).expect("Failed to serialize message");
-                let topic = self.processor.assign_topic(&msg);
-                let key = self.processor.assign_key(&msg);
-                let record = FutureRecord::to(topic.as_ref())
-                    .key(key.as_ref())
-                    .payload(&serialized);
-                let res = producer.send(record, Duration::from_secs(0)).await;
-                match res {
-                    Ok((partition, offset)) => trace!(
-                        "Message successfully delivered to topic: {}, partition {}, offset {}",
-                        topic,
-                        partition,
-                        offset
-                    ),
-                    Err((err, msg)) => error!("Message: {:?}\nError: {:?}", msg, err),
+                let msgs = msgs.expect("Guaranteed to be Ok");
+                for msg in msgs {
+                    debug!("Message received: {:?}", msg);
+                    let serialized =
+                        serde_json::to_string(&msg).expect("Failed to serialize message");
+                    let topic = self.processor.assign_topic(&msg);
+                    let key = self.processor.assign_key(&msg);
+                    let record = FutureRecord::to(topic.as_ref())
+                        .key(key.as_ref())
+                        .payload(&serialized);
+                    let res = producer.send(record, Duration::from_secs(0)).await;
+                    match res {
+                        Ok((partition, offset)) => trace!(
+                            "Message successfully delivered to topic: {}, partition {}, offset {}",
+                            topic,
+                            partition,
+                            offset
+                        ),
+                        Err((err, msg)) => error!("Message: {:?}\nError: {:?}", msg, err),
+                    }
                 }
             })
             .await;
