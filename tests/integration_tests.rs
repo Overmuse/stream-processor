@@ -5,6 +5,7 @@ use rdkafka::{
     producer::{FutureProducer, FutureRecord},
     ClientConfig, Message,
 };
+use std::borrow::Cow;
 use stream_processor::*;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
@@ -18,12 +19,12 @@ impl StreamProcessor for StreamDoubler {
         Ok(Some(input * 2.0))
     }
 
-    fn assign_topic(&self, _output: &Self::Output) -> &str {
-        "test-output"
+    fn assign_topic(&self, _output: &Self::Output) -> Cow<str> {
+        "test-output".into()
     }
 
-    fn assign_key(&self, _output: &Self::Output) -> &str {
-        "key"
+    fn assign_key(&self, _output: &Self::Output) -> Cow<str> {
+        "key".into()
     }
 }
 

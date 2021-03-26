@@ -6,6 +6,7 @@ use crate::{
 use futures::prelude::*;
 use rdkafka::{message::Message, producer::FutureRecord};
 use serde::{de::DeserializeOwned, Serialize};
+use std::borrow::Cow;
 use std::time::Duration;
 use tracing::{debug, error, info, trace};
 
@@ -14,8 +15,8 @@ pub trait StreamProcessor {
     type Output: Serialize + std::fmt::Debug;
 
     fn handle_message(&self, input: Self::Input) -> Result<Option<Self::Output>>;
-    fn assign_topic(&self, output: &Self::Output) -> &str;
-    fn assign_key(&self, output: &Self::Output) -> &str;
+    fn assign_topic(&self, output: &Self::Output) -> Cow<str>;
+    fn assign_key(&self, output: &Self::Output) -> Cow<str>;
 }
 
 pub struct StreamRunner<T: StreamProcessor> {
@@ -56,7 +57,9 @@ impl<T: StreamProcessor> StreamRunner<T> {
                         serde_json::to_string(&msg).expect("Failed to serialize message");
                     let topic = self.processor.assign_topic(&msg);
                     let key = self.processor.assign_key(&msg);
-                    let record = FutureRecord::to(topic).key(key).payload(&serialized);
+                    let record = FutureRecord::to(topic.as_ref())
+                        .key(key.as_ref())
+                        .payload(&serialized);
                     let res = producer.send(record, Duration::from_secs(0)).await;
                     match res {
                         Ok((partition, offset)) => trace!(
