@@ -120,7 +120,7 @@ jobs:
         with:
           toolchain: stable
       - name: Initiate kafka
-        run: ./scripts/init_kafka
+        run: ./scripts/init_kafka.sh
       - name: Install tarpaulin
         run: cargo install cargo-tarpaulin
       - name: Generate coverage
