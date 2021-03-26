@@ -15,8 +15,12 @@ struct StreamDoubler;
 impl StreamProcessor for StreamDoubler {
     type Input = f64;
     type Output = f64;
+    type Error = ();
 
-    async fn handle_message(&self, input: Self::Input) -> Result<Option<Vec<Self::Output>>, Error> {
+    async fn handle_message(
+        &self,
+        input: Self::Input,
+    ) -> Result<Option<Vec<Self::Output>>, Self::Error> {
         Ok(Some(vec![input * 2.0]))
     }
 

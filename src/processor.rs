@@ -19,6 +19,8 @@ pub trait StreamProcessor {
     type Input: DeserializeOwned;
     /// The output type from the stream processor, which will be serialized and sent to Kafka.
     type Output: Serialize + std::fmt::Debug;
+    /// The error type that might be thrown in [`handle_message`].
+    type Error: std::fmt::Debug;
 
     /// Convert the input into a `impl Future<Result<Option<Vec<Self::Output>>>>`.  
     /// [`futures::Future`] because we might want to `await` in the implementation.  
@@ -26,7 +28,10 @@ pub trait StreamProcessor {
     /// [`Option`] because we might not want to send any output. If this is `None`, we skip sending
     /// to Kafka.  
     /// [`Vec`] because we might want to send _many_ outputs for one input  
-    async fn handle_message(&self, input: Self::Input) -> Result<Option<Vec<Self::Output>>>;
+    async fn handle_message(
+        &self,
+        input: Self::Input,
+    ) -> std::result::Result<Option<Vec<Self::Output>>, Self::Error>;
     /// Decide which topic to send the output to.
     fn assign_topic(&self, output: &Self::Output) -> Cow<str>;
     /// Decide which key to assign to the output.
