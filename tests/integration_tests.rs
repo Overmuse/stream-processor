@@ -14,8 +14,8 @@ impl StreamProcessor for StreamDoubler {
     type Input = f64;
     type Output = f64;
 
-    fn handle_message(&self, input: Self::Input) -> Result<Self::Output, Error> {
-        Ok(input * 2.0)
+    fn handle_message(&self, input: Self::Input) -> Result<Option<Self::Output>, Error> {
+        Ok(Some(input * 2.0))
     }
 
     fn assign_topic(&self, _output: &Self::Output) -> &str {
