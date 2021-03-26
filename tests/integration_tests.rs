@@ -11,11 +11,12 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 struct StreamDoubler;
 
+#[async_trait::async_trait]
 impl StreamProcessor for StreamDoubler {
     type Input = f64;
     type Output = f64;
 
-    fn handle_message(&self, input: Self::Input) -> Result<Option<Self::Output>, Error> {
+    async fn handle_message(&self, input: Self::Input) -> Result<Option<Self::Output>, Error> {
         Ok(Some(input * 2.0))
     }
 
