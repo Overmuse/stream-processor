@@ -1,3 +1,5 @@
+use serde::Deserialize;
+
 #[derive(Debug, Clone)]
 pub enum SecurityProtocol {
     Plaintext,
@@ -7,7 +9,7 @@ pub enum SecurityProtocol {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct KafkaSettings {
     pub bootstrap_servers: String,
     pub group_id: String,
