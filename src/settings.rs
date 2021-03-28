@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum SecurityProtocol {
     Plaintext,
     SaslSsl {

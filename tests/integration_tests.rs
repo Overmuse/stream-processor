@@ -15,7 +15,7 @@ struct StreamDoubler;
 impl StreamProcessor for StreamDoubler {
     type Input = f64;
     type Output = f64;
-    type Error = ();
+    type Error = String;
 
     async fn handle_message(
         &self,
