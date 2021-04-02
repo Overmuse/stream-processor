@@ -85,7 +85,6 @@ impl<T: StreamProcessor> StreamRunner<T> {
                 match msgs {
                     Err(e) => {
                         error!("{:#?}", e);
-                        return;
                     }
                     Ok(msgs) => {
                         for msg in msgs {

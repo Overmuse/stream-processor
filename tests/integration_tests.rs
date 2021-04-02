@@ -1,4 +1,4 @@
-use anyhow::Error;
+use kafka_settings::{KafkaSettings, SecurityProtocol};
 use rdkafka::{
     admin::{AdminClient, AdminOptions, NewTopic, TopicReplication},
     client::DefaultClientContext,
@@ -68,6 +68,7 @@ async fn main() {
     // Create topics
     let admin_options = AdminOptions::new();
     let admin = test_admin();
+    tracing::debug!("Creating topics");
     admin
         .create_topics(
             &[
@@ -98,6 +99,9 @@ async fn main() {
     test_consumer.subscribe(&["test-output"]).unwrap();
 
     // Actual test
+    // TODO: Replace with liveness check
+    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    tracing::debug!("Sending input");
     test_producer
         .send_result(FutureRecord::to("test-input").key("test").payload("2"))
         .unwrap();
