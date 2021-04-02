@@ -1,3 +1,4 @@
+use anyhow::Error;
 use rdkafka::{
     admin::{AdminClient, AdminOptions, NewTopic, TopicReplication},
     client::DefaultClientContext,

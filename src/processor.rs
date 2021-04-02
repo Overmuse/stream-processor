@@ -1,12 +1,9 @@
-use crate::{
-    error::{Error, Result},
-    kafka::{consumer, producer},
-    settings::KafkaSettings,
-};
+use crate::error::{Error, Result};
 use futures::{
     future::{ready, Either},
     prelude::*,
 };
+use kafka_settings::{consumer, producer, KafkaSettings};
 use rdkafka::{message::Message, producer::FutureRecord};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{borrow::Cow, time::Duration};
@@ -20,7 +17,7 @@ pub trait StreamProcessor {
     /// The output type from the stream processor, which will be serialized and sent to Kafka.
     type Output: Serialize + std::fmt::Debug;
     /// The error type that might be thrown in [`handle_message`].
-    type Error: std::fmt::Display;
+    type Error: std::fmt::Display + std::fmt::Debug;
 
     /// Convert the input into a `impl Future<Result<Option<Vec<Self::Output>>>>`.  
     /// [`futures::Future`] because we might want to `await` in the implementation.  
@@ -62,10 +59,12 @@ impl<T: StreamProcessor> StreamRunner<T> {
             .map(|x| -> Result<T::Input> {
                 let owned = x?.detach();
                 let payload = owned.payload().ok_or(Error::EmptyPayload)?;
-                serde_json::from_slice(payload).map_err(|e| Error::Serde {
+                let payload_string =
+                    String::from_utf8(payload.to_vec()).expect("Every message should be utf8");
+                debug!("Input: {:?}", payload_string);
+                serde_json::from_str(&payload_string).map_err(|e| Error::Serde {
                     source: e,
-                    msg: String::from_utf8(payload.to_vec())
-                        .expect("Failed to parse utf8 vec to string"),
+                    msg: payload_string,
                 })
             })
             .filter_map(|msg| match msg {
@@ -77,7 +76,7 @@ impl<T: StreamProcessor> StreamRunner<T> {
                     Either::Left(output)
                 }
                 Err(e) => {
-                    error!("{}", e);
+                    error!("{:#?}", e);
                     Either::Right(ready(None))
                 }
             });
@@ -85,12 +84,12 @@ impl<T: StreamProcessor> StreamRunner<T> {
             .for_each_concurrent(None, |msgs| async {
                 match msgs {
                     Err(e) => {
-                        error!("{}", e);
+                        error!("{:#?}", e);
                         return;
                     }
                     Ok(msgs) => {
                         for msg in msgs {
-                            debug!("Message received: {:?}", msg);
+                            debug!("Output: {:?}", msg);
                             let serialized =
                                 serde_json::to_string(&msg).expect("Failed to serialize message");
                             let topic = self.processor.assign_topic(&msg);
