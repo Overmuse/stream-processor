@@ -51,7 +51,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: stable
           override: true
       - name: Install rustfmt
         run: rustup component add rustfmt
@@ -85,7 +85,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: stable
           override: true
       - name: Install clippy
         run: rustup component add clippy
@@ -118,7 +118,7 @@ jobs:
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
       - name: Initiate kafka
         run: ./scripts/init_kafka.sh
       - name: Install tarpaulin
