@@ -1,27 +1,36 @@
-use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
-use rdkafka::consumer::{Consumer, StreamConsumer};
-use rdkafka::producer::{FutureProducer, FutureRecord};
-use rdkafka::Message;
-use rdkafka::{client::DefaultClientContext, ClientConfig};
+use kafka_settings::{KafkaSettings, SecurityProtocol};
+use rdkafka::{
+    admin::{AdminClient, AdminOptions, NewTopic, TopicReplication},
+    client::DefaultClientContext,
+    consumer::{Consumer, StreamConsumer},
+    producer::{FutureProducer, FutureRecord},
+    ClientConfig, Message,
+};
+use std::borrow::Cow;
 use stream_processor::*;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 struct StreamDoubler;
 
+#[async_trait::async_trait]
 impl StreamProcessor for StreamDoubler {
     type Input = f64;
     type Output = f64;
+    type Error = String;
 
-    fn handle_message(&self, input: Self::Input) -> Result<Self::Output, Error> {
-        Ok(input * 2.0)
+    async fn handle_message(
+        &self,
+        input: Self::Input,
+    ) -> Result<Option<Vec<Self::Output>>, Self::Error> {
+        Ok(Some(vec![input * 2.0]))
     }
 
-    fn assign_topic(&self, _output: &Self::Output) -> &str {
-        "test-output"
+    fn assign_topic(&self, _output: &Self::Output) -> Cow<str> {
+        "test-output".into()
     }
 
-    fn assign_key(&self, _output: &Self::Output) -> &str {
-        "key"
+    fn assign_key(&self, _output: &Self::Output) -> Cow<str> {
+        "key".into()
     }
 }
 
@@ -59,6 +68,7 @@ async fn main() {
     // Create topics
     let admin_options = AdminOptions::new();
     let admin = test_admin();
+    tracing::debug!("Creating topics");
     admin
         .create_topics(
             &[
@@ -89,6 +99,9 @@ async fn main() {
     test_consumer.subscribe(&["test-output"]).unwrap();
 
     // Actual test
+    // TODO: Replace with liveness check
+    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+    tracing::debug!("Sending input");
     test_producer
         .send_result(FutureRecord::to("test-input").key("test").payload("2"))
         .unwrap();

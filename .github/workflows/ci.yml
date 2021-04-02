@@ -7,12 +7,14 @@ on:
       - 'Cargo.lock'
       - 'Dockerfile'
       - 'src/**'  
+      - 'tests/**'  
   pull_request:
     paths:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'Dockerfile'
       - 'src/**'  
+      - 'tests/**'  
 
 name: Continuous integration
 
@@ -118,7 +120,7 @@ jobs:
         with:
           toolchain: stable
       - name: Initiate kafka
-        run: ./scripts/init_kafka
+        run: ./scripts/init_kafka.sh
       - name: Install tarpaulin
         run: cargo install cargo-tarpaulin
       - name: Generate coverage
