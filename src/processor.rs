@@ -1,9 +1,6 @@
-use crate::{
-    error::{Error, Result},
-    kafka::{consumer, producer},
-    settings::KafkaSettings,
-};
+use crate::error::{Error, Result};
 use futures::prelude::*;
+use kafka_settings::{consumer, producer, KafkaSettings};
 use rdkafka::{message::Message, producer::FutureRecord};
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;

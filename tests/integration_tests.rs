@@ -1,9 +1,10 @@
+use kafka_settings::{ConsumerSettings, KafkaSettings, SecurityProtocol};
 use rdkafka::admin::{AdminClient, AdminOptions, NewTopic, TopicReplication};
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use rdkafka::Message;
 use rdkafka::{client::DefaultClientContext, ClientConfig};
-use stream_processor::*;
+use stream_processor::{Error, StreamProcessor, StreamRunner};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 struct StreamDoubler;
@@ -73,12 +74,14 @@ async fn main() {
     // Setup stream processor
     tokio::spawn(async {
         let processor = StreamDoubler;
-        let settings = KafkaSettings::new(
-            "localhost:9094".into(),
-            "test".into(),
-            SecurityProtocol::Plaintext,
-            vec!["test-input".into()],
-        );
+        let settings = KafkaSettings {
+            bootstrap_servers: "localhost:9094".into(),
+            security_protocol: SecurityProtocol::Plaintext,
+            consumer: Some(ConsumerSettings {
+                group_id: "test".into(),
+                input_topics: vec!["test-input".into()],
+            }),
+        };
         let runner = StreamRunner::new(processor, settings);
         runner.run().await.unwrap();
     });
