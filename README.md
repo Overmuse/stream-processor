@@ -1,0 +1,2 @@
+# stream-processor
+`stream-processor` is a utility library for easily creating applications that transform [`apache kafka`](https://kafka.apache.org/) data. The library exposes the central `StreamProcessor` trait which allows the user to define input- and output-types as well as the core transformation function. All of the remaining stream-processing logic is abstracted away, and the application is run by calling `run` on the `StreamRunner` struct.
